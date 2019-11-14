@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Audio Recorder</string>
+    <string name="recording_length">Recording length:</string>
+    <string name="recording_time">%s seconds</string>
+</resources>
