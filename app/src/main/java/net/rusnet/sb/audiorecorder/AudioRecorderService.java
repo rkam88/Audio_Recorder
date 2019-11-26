@@ -6,15 +6,23 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class AudioRecorderService extends Service {
 
@@ -29,7 +37,11 @@ public class AudioRecorderService extends Service {
     private RemoteViews mRemoteViews;
 
     private RecordingStatus mRecordingStatus;
-    private String currentTime;
+    private int mCurrentTime;
+
+    private String mFileName;
+    private MediaRecorder mMediaRecorder;
+    private Timer mTimer;
 
     @Nullable
     @Override
@@ -42,54 +54,106 @@ public class AudioRecorderService extends Service {
         super.onCreate();
 
         mRecordingStatus = RecordingStatus.RECORDING;
-        currentTime = "0";
+        mCurrentTime = 0;
 
         createNotificationChannel();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && !TextUtils.isEmpty(intent.getAction())) {
             switch (intent.getAction()) {
                 case ACTION_PAUSE:
                     //todo: pause recording
+                    mMediaRecorder.pause();
+                    stopRecordingTimer();
+
                     mRecordingStatus = RecordingStatus.PAUSED;
-                    updateNotification(currentTime);
+                    updateNotification(mCurrentTime);
 
                     Log.d(TAG, "onStartCommand: launched with ACTION_PAUSE");
                     return START_NOT_STICKY;
 
                 case ACTION_RESUME:
                     //todo: resume recording
+                    mMediaRecorder.resume();
+                    startRecordingTimer();
+
                     mRecordingStatus = RecordingStatus.RECORDING;
-                    updateNotification(currentTime);
+                    updateNotification(mCurrentTime);
 
                     Log.d(TAG, "onStartCommand: launched with ACTION_RESUME");
                     return START_NOT_STICKY;
 
                 case ACTION_STOP:
                     //todo: stop recording
+                    mMediaRecorder.stop();
+                    mMediaRecorder.reset();
+                    mMediaRecorder.release();
+                    stopRecordingTimer();
+
                     Log.d(TAG, "onStartCommand: launched with ACTION_STOP");
                     stopSelf();
                     return START_NOT_STICKY;
             }
         }
 
-        startForeground(NOTIFICATION_ID, createNotification(currentTime));
-
+        startRecording();
+        startRecordingTimer();
+        startForeground(NOTIFICATION_ID, createNotification(mCurrentTime));
         return START_NOT_STICKY;
+
+    }
+
+    private void startRecordingTimer() {
+        mTimer = new Timer();
+        mTimer.schedule(new TimerTask() {
+
+            @Override
+            public void run() {
+                mCurrentTime++;
+                updateNotification(mCurrentTime);
+            }
+
+        }, 0, 1000);
+    }
+
+    private void stopRecordingTimer() {
+        mTimer.cancel();
+        mTimer.purge();
+    }
+
+    private void startRecording() {
+        mFileName = this.getExternalFilesDir(Environment.DIRECTORY_MUSIC).getAbsolutePath();
+
+        Date date = new Date();
+        String recordingDate = "/" + date.getTime() + ".3gp";
+        mFileName += recordingDate;
+        Log.d(TAG, "startRecording: recording to file with name: " + mFileName);
+
+        mMediaRecorder = new MediaRecorder();
+        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        mMediaRecorder.setOutputFile(mFileName);
+
+        try {
+            mMediaRecorder.prepare();
+            mMediaRecorder.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
 
-
-        //todo: check later
         Log.d(TAG, "onDestroy() called");
     }
 
-    private void updateNotification(String time) {
+    private void updateNotification(int time) {
         Notification notification = createNotification(time);
 
         NotificationManagerCompat notificationManagerCompat =
@@ -97,14 +161,14 @@ public class AudioRecorderService extends Service {
         notificationManagerCompat.notify(NOTIFICATION_ID, notification);
     }
 
-    private Notification createNotification(String time) {
+    private Notification createNotification(int time) {
         mRemoteViews = new RemoteViews(
                 getPackageName(),
                 R.layout.recording_notification);
 
         setupPauseAndResumeButton();
         setupStopButton();
-        updateRecordingTimeTextView(time);
+        updateRecordingTimeTextView(String.valueOf(time));
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(
                 this,
@@ -142,11 +206,11 @@ public class AudioRecorderService extends Service {
         switch (mRecordingStatus) {
             case PAUSED:
                 pauseOrResumeIntent.setAction(ACTION_RESUME);
-                mRemoteViews.setImageViewResource(R.id.button_pause_resume, R.drawable.ic_pause_black);
+                mRemoteViews.setImageViewResource(R.id.button_pause_resume, R.drawable.ic_play_arrow_black);
                 break;
             case RECORDING:
                 pauseOrResumeIntent.setAction(ACTION_PAUSE);
-                mRemoteViews.setImageViewResource(R.id.button_pause_resume, R.drawable.ic_play_arrow_black);
+                mRemoteViews.setImageViewResource(R.id.button_pause_resume, R.drawable.ic_pause_black);
                 break;
         }
         PendingIntent pauseOrResumePendingIntent = PendingIntent.getService(
