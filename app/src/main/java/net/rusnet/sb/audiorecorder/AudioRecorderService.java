@@ -65,7 +65,6 @@ public class AudioRecorderService extends Service {
         if (intent != null && !TextUtils.isEmpty(intent.getAction())) {
             switch (intent.getAction()) {
                 case ACTION_PAUSE:
-                    //todo: pause recording
                     mMediaRecorder.pause();
                     stopRecordingTimer();
 
@@ -76,7 +75,6 @@ public class AudioRecorderService extends Service {
                     return START_NOT_STICKY;
 
                 case ACTION_RESUME:
-                    //todo: resume recording
                     mMediaRecorder.resume();
                     startRecordingTimer();
 
@@ -87,7 +85,6 @@ public class AudioRecorderService extends Service {
                     return START_NOT_STICKY;
 
                 case ACTION_STOP:
-                    //todo: stop recording
                     mMediaRecorder.stop();
                     mMediaRecorder.reset();
                     mMediaRecorder.release();
