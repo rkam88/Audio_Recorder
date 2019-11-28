@@ -19,7 +19,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
     private OnItemClickListener mListener;
 
     public interface OnItemClickListener {
-        void onItemClick(File file);
+        void onItemClick(int filePosition);
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
@@ -70,7 +70,7 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.ViewHolder> {
                 @Override
                 public void onClick(View v) {
                     if (mListener != null) {
-                        mListener.onItemClick(mFiles.get(getAdapterPosition()));
+                        mListener.onItemClick(getAdapterPosition());
                     }
                 }
             });

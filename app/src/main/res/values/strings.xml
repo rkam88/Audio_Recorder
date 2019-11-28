@@ -4,4 +4,6 @@
     <string name="recording_time">%s seconds</string>
     <string name="select_a_recording">Select a recording to play</string>
     <string name="toast_select_a_recording">Please select a recording from the list to play</string>
+    <string name="play_next">play next</string>
+    <string name="play_previous">play previous</string>
 </resources>

@@ -18,13 +18,35 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
-        <ImageButton
-            android:id="@+id/image_button_play_recording"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_play_arrow_black" />
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/image_button_play_recording"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:src="@drawable/ic_play_arrow_black" />
+
+            <Button
+                android:id="@+id/button_play_prev"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/play_previous" />
+
+            <Button
+                android:id="@+id/button_play_next"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="@string/play_next" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/text_view_recording_name"

@@ -22,6 +22,8 @@
         </activity>
 
         <service android:name=".AudioRecorderService" />
+        <service android:name=".PlaybackBoundService"
+            android:process=":myExternalProcess"/>
 
     </application>
 

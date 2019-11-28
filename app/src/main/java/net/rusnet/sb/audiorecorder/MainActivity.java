@@ -1,12 +1,21 @@
 package net.rusnet.sb.audiorecorder;
 
 import android.Manifest;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +37,7 @@ public class MainActivity
 
     public static final int PERMISSION_RECORD_AUDIO = 0;
     public static final String ACTION_NEW_RECORD_ADDED = "net.rusnet.sb.audiorecorder.ACTION_NEW_RECORD_ADDED";
+    private static final int NO_FILE_SELECTED = -1;
 
     private NewRecordingBroadCastReceiver broadcastReceiver;
 
@@ -36,7 +46,40 @@ public class MainActivity
 
     private TextView mRecordingName;
     private ImageButton mPlayImageButton;
-    private File mSelectedFile = null;
+    private List<File> mFiles;
+    private int mSelectedFilePosition = NO_FILE_SELECTED;
+
+    private Messenger mServiceMessenger = null;
+    private boolean mBound;
+    private boolean mIsServicePlaying;
+    private ServiceConnection mConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, IBinder service) {
+            mServiceMessenger = new Messenger(service);
+            mBound = true;
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            mServiceMessenger = null;
+            mBound = false;
+        }
+    };
+
+    public static final int MSG_UPDATE_CURRENT_FILE = 10;
+    private Messenger mClientMessenger = new Messenger(new IncomingHandlerMainActivity());
+
+    class IncomingHandlerMainActivity extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_UPDATE_CURRENT_FILE:
+                    mSelectedFilePosition = msg.arg1;
+                    mRecordingName.setText(mFiles.get(mSelectedFilePosition).getName());
+                    break;
+                default:
+                    super.handleMessage(msg);
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,8 +96,16 @@ public class MainActivity
 
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = new Intent(MainActivity.this, PlaybackBoundService.class);
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+    }
+
     private void initViews() {
-        findViewById(R.id.button_start_recording).setOnClickListener(new View.OnClickListener() {
+        final Button startRecordingButton = findViewById(R.id.button_start_recording);
+        startRecordingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startRecorderService();
@@ -66,20 +117,58 @@ public class MainActivity
         mPlayImageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mSelectedFile == null) {
+                if (mSelectedFilePosition == NO_FILE_SELECTED) {
                     Toast.makeText(MainActivity.this, R.string.toast_select_a_recording, Toast.LENGTH_SHORT).show();
                 } else {
-                    //todo: create and launch playback service
-                    Toast.makeText(MainActivity.this, "Launched service with file: " + mSelectedFile.toString(), Toast.LENGTH_SHORT).show();
+                    if (!mIsServicePlaying) {
+                        startRecordingButton.setEnabled(false);
+                        mIsServicePlaying = true;
+                        mPlayImageButton.setImageResource(R.drawable.ic_stop_black);
+                        sendMessageToPlaybackService(PlaybackBoundService.MSG_PLAY, mSelectedFilePosition);
+                    } else {
+                        startRecordingButton.setEnabled(true);
+                        mIsServicePlaying = false;
+                        mPlayImageButton.setImageResource(R.drawable.ic_play_arrow_black);
+                        sendMessageToPlaybackService(PlaybackBoundService.MSG_STOP);
+                    }
                 }
+            }
+        });
+
+        findViewById(R.id.button_play_next).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mBound && mIsServicePlaying)
+                    sendMessageToPlaybackService(PlaybackBoundService.MSG_NEXT);
+            }
+        });
+        findViewById(R.id.button_play_prev).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mBound && mIsServicePlaying)
+                    sendMessageToPlaybackService(PlaybackBoundService.MSG_PREV);
             }
         });
     }
 
+    private void sendMessageToPlaybackService(int message) {
+        sendMessageToPlaybackService(message, 0);
+    }
+
+    private void sendMessageToPlaybackService(int message, int position) {
+        Message msg = Message.obtain(null, message, position, 0);
+        msg.replyTo = mClientMessenger;
+        try {
+            mServiceMessenger.send(msg);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void updateRecyclerContent() {
         File root = getExternalFilesDir(Environment.DIRECTORY_MUSIC);
-        List<File> sdFiles = Arrays.asList(root.listFiles());
-        mAdapter.setFiles(sdFiles);
+        mFiles = Arrays.asList(root.listFiles());
+        mAdapter.setFiles(mFiles);
         mAdapter.notifyDataSetChanged();
     }
 
@@ -134,9 +223,20 @@ public class MainActivity
     }
 
     @Override
-    public void onItemClick(File file) {
-        mSelectedFile = file;
-        mRecordingName.setText(file.getName());
-        //todo: update current track in playback service (if launched)
+    public void onItemClick(int filePosition) {
+        mSelectedFilePosition = filePosition;
+        mRecordingName.setText(mFiles.get(mSelectedFilePosition).getName());
+        if (mIsServicePlaying) {
+            mPlayImageButton.callOnClick();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+        }
     }
 }
