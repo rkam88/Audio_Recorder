@@ -11,7 +11,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.RemoteViews;
 
 import androidx.annotation.Nullable;
@@ -25,8 +24,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class AudioRecorderService extends Service {
-
-    private static final String TAG = "AudioRecorderService";
 
     private static final String CHANEL_ID = "Channel_1";
     private static final int NOTIFICATION_ID = 1;
@@ -71,7 +68,6 @@ public class AudioRecorderService extends Service {
                     mRecordingStatus = RecordingStatus.PAUSED;
                     updateNotification(mCurrentTime);
 
-                    Log.d(TAG, "onStartCommand: launched with ACTION_PAUSE");
                     return START_NOT_STICKY;
 
                 case ACTION_RESUME:
@@ -81,7 +77,6 @@ public class AudioRecorderService extends Service {
                     mRecordingStatus = RecordingStatus.RECORDING;
                     updateNotification(mCurrentTime);
 
-                    Log.d(TAG, "onStartCommand: launched with ACTION_RESUME");
                     return START_NOT_STICKY;
 
                 case ACTION_STOP:
@@ -90,7 +85,6 @@ public class AudioRecorderService extends Service {
                     mMediaRecorder.release();
                     stopRecordingTimer();
 
-                    Log.d(TAG, "onStartCommand: launched with ACTION_STOP");
                     stopSelf();
 
                     Intent newRecordingIntent = new Intent();
@@ -132,7 +126,6 @@ public class AudioRecorderService extends Service {
         Date date = new Date();
         String recordingDate = "/" + date.getTime() + ".3gp";
         mFileName += recordingDate;
-        Log.d(TAG, "startRecording: recording to file with name: " + mFileName);
 
         mMediaRecorder = new MediaRecorder();
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -151,8 +144,6 @@ public class AudioRecorderService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
-        Log.d(TAG, "onDestroy() called");
     }
 
     private void updateNotification(int time) {

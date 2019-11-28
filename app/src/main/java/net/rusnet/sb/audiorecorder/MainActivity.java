@@ -6,7 +6,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -15,7 +14,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
@@ -33,8 +31,6 @@ public class MainActivity
 
     private NewRecordingBroadCastReceiver broadcastReceiver;
 
-    private static final String TAG = "MainActivity";
-
     private RecyclerView mFileListRecycler;
     private FileAdapter mAdapter;
 
@@ -44,7 +40,6 @@ public class MainActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate() called with: savedInstanceState = [" + savedInstanceState + "]");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -103,7 +98,6 @@ public class MainActivity
     }
 
     private void startRecorderService() {
-        Log.d("TAG", "Starting AudioRecorderService...");
         Intent intent = new Intent(MainActivity.this,
                 AudioRecorderService.class
         );
@@ -130,7 +124,6 @@ public class MainActivity
 
     @Override
     public void onNewRecordingAddedCallback() {
-        Log.d(TAG, "onNewRecordingAddedCallback() called");
         updateRecyclerContent();
     }
 
