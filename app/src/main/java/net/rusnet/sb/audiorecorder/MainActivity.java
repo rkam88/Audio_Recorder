@@ -2,6 +2,7 @@ package net.rusnet.sb.audiorecorder;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,12 +12,18 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements NewRecordingBroadCastReceiver.NewRecordingListener {
 
     public static final int PERMISSION_RECORD_AUDIO = 0;
+    public static final String ACTION_NEW_RECORD_ADDED = "net.rusnet.sb.audiorecorder.ACTION_NEW_RECORD_ADDED";
+
+    private NewRecordingBroadCastReceiver broadcastReceiver;
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate() called with: savedInstanceState = [" + savedInstanceState + "]");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -26,6 +33,12 @@ public class MainActivity extends AppCompatActivity {
                 startRecorderService();
             }
         });
+
+        broadcastReceiver = new NewRecordingBroadCastReceiver(this);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_NEW_RECORD_ADDED);
+
+        registerReceiver(broadcastReceiver, filter);
     }
 
     private void startRecorderService() {
@@ -52,5 +65,17 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == PERMISSION_RECORD_AUDIO && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
             startRecorderService();
         }
+    }
+
+    @Override
+    public void onNewRecordingAddedCallback() {
+        Log.d(TAG, "onNewRecordingAddedCallback() called");
+        //todo: add recycler view update
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(broadcastReceiver);
     }
 }

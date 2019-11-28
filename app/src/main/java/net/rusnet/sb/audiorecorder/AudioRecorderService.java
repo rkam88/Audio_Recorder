@@ -26,7 +26,7 @@ import java.util.TimerTask;
 
 public class AudioRecorderService extends Service {
 
-    private static final String TAG = "TAG";
+    private static final String TAG = "AudioRecorderService";
 
     private static final String CHANEL_ID = "Channel_1";
     private static final int NOTIFICATION_ID = 1;
@@ -95,6 +95,11 @@ public class AudioRecorderService extends Service {
 
                     Log.d(TAG, "onStartCommand: launched with ACTION_STOP");
                     stopSelf();
+
+                    Intent newRecordingIntent = new Intent();
+                    newRecordingIntent.setAction(MainActivity.ACTION_NEW_RECORD_ADDED);
+                    sendBroadcast(newRecordingIntent);
+
                     return START_NOT_STICKY;
             }
         }
