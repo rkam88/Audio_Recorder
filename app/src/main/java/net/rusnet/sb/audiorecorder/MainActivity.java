@@ -46,6 +46,7 @@ public class MainActivity
 
     private TextView mRecordingName;
     private ImageButton mPlayImageButton;
+    private Button mStartRecordingButton;
     private List<File> mFiles;
     private int mSelectedFilePosition = NO_FILE_SELECTED;
 
@@ -65,6 +66,7 @@ public class MainActivity
     };
 
     public static final int MSG_UPDATE_CURRENT_FILE = 10;
+    public static final int MSG_UPDATE_PLAY_PAUSE_BUTTON = 20;
     private Messenger mClientMessenger = new Messenger(new IncomingHandlerMainActivity());
 
     class IncomingHandlerMainActivity extends Handler {
@@ -74,6 +76,11 @@ public class MainActivity
                 case MSG_UPDATE_CURRENT_FILE:
                     mSelectedFilePosition = msg.arg1;
                     mRecordingName.setText(mFiles.get(mSelectedFilePosition).getName());
+                    break;
+                case MSG_UPDATE_PLAY_PAUSE_BUTTON:
+                    mStartRecordingButton.setEnabled(true);
+                    mIsServicePlaying = false;
+                    mPlayImageButton.setImageResource(R.drawable.ic_play_arrow_black);
                     break;
                 default:
                     super.handleMessage(msg);
@@ -104,8 +111,8 @@ public class MainActivity
     }
 
     private void initViews() {
-        final Button startRecordingButton = findViewById(R.id.button_start_recording);
-        startRecordingButton.setOnClickListener(new View.OnClickListener() {
+        mStartRecordingButton = findViewById(R.id.button_start_recording);
+        mStartRecordingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startRecorderService();
@@ -121,12 +128,12 @@ public class MainActivity
                     Toast.makeText(MainActivity.this, R.string.toast_select_a_recording, Toast.LENGTH_SHORT).show();
                 } else {
                     if (!mIsServicePlaying) {
-                        startRecordingButton.setEnabled(false);
+                        mStartRecordingButton.setEnabled(false);
                         mIsServicePlaying = true;
                         mPlayImageButton.setImageResource(R.drawable.ic_stop_black);
                         sendMessageToPlaybackService(PlaybackBoundService.MSG_PLAY, mSelectedFilePosition);
                     } else {
-                        startRecordingButton.setEnabled(true);
+                        mStartRecordingButton.setEnabled(true);
                         mIsServicePlaying = false;
                         mPlayImageButton.setImageResource(R.drawable.ic_play_arrow_black);
                         sendMessageToPlaybackService(PlaybackBoundService.MSG_STOP);
@@ -138,15 +145,29 @@ public class MainActivity
         findViewById(R.id.button_play_next).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mBound && mIsServicePlaying)
-                    sendMessageToPlaybackService(PlaybackBoundService.MSG_NEXT);
+                if (mBound) {
+                    if (mIsServicePlaying) {
+                        sendMessageToPlaybackService(PlaybackBoundService.MSG_NEXT);
+                    } else {
+                        mSelectedFilePosition++;
+                        if (mSelectedFilePosition >= mFiles.size()) mSelectedFilePosition = 0;
+                        mRecordingName.setText(mFiles.get(mSelectedFilePosition).getName());
+                    }
+                }
             }
         });
         findViewById(R.id.button_play_prev).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mBound && mIsServicePlaying)
-                    sendMessageToPlaybackService(PlaybackBoundService.MSG_PREV);
+                if (mBound) {
+                    if (mIsServicePlaying) {
+                        sendMessageToPlaybackService(PlaybackBoundService.MSG_PREV);
+                    } else {
+                        mSelectedFilePosition--;
+                        if (mSelectedFilePosition < 0) mSelectedFilePosition = mFiles.size() - 1;
+                        mRecordingName.setText(mFiles.get(mSelectedFilePosition).getName());
+                    }
+                }
             }
         });
     }
